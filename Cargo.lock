@@ -1520,7 +1520,6 @@ dependencies = [
  "actix 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "actix-web 1.0.0-rc (registry+https://github.com/rust-lang/crates.io-index)",
  "actix-web-actors 1.0.0-beta.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

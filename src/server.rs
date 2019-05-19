@@ -3,8 +3,8 @@
 //! room through `ChatServer`.
 
 use actix::prelude::*;
-use rand::{self, rngs::ThreadRng, Rng};
 use std::collections::{HashMap, HashSet};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// Chat server sends this messages to session
 #[derive(Message)]
@@ -57,7 +57,7 @@ pub struct Join {
 pub struct ChatServer {
     sessions: HashMap<usize, Recipient<Message>>,
     rooms: HashMap<String, HashSet<usize>>,
-    rng: ThreadRng,
+    rng: AtomicUsize,
 }
 
 impl Default for ChatServer {
@@ -69,7 +69,7 @@ impl Default for ChatServer {
         ChatServer {
             sessions: HashMap::new(),
             rooms: rooms,
-            rng: rand::thread_rng(),
+            rng: AtomicUsize::default(),
         }
     }
 }
@@ -108,8 +108,8 @@ impl Handler<Connect> for ChatServer {
         // notify all users in same room
         self.send_message(&"Main".to_owned(), "Someone joined", 0);
 
-        // register session with random id
-        let id = self.rng.gen::<usize>();
+        // register session with unique id
+        let id = self.rng.fetch_add(1, Ordering::Relaxed);
         self.sessions.insert(id, msg.addr);
 
         // auto join session to Main room
