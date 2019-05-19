@@ -1,11 +1,11 @@
 [package]
-name = "websocket-chat"
+name = "presence-ws"
 version = "0.1.0"
 authors = ["Ryan Brewster <ryanpbrewster@gmail.com>"]
 edition = "2018"
 
 [[bin]]
-name = "websocket-chat-server"
+name = "presence-ws-server"
 path = "src/main.rs"
 
 [dependencies]
