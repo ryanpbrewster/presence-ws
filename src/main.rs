@@ -204,7 +204,6 @@ impl WsChatSession {
 }
 
 fn main() -> std::io::Result<()> {
-    env_logger::init();
     let sys = System::new("ws-example");
 
     // Start chat server actor
