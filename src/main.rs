@@ -7,6 +7,7 @@ use actix_web_actors::ws;
 mod server;
 
 use server::{ChatServer, Connect, Disconnect, OutboundMessage};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// How often heartbeat pings are sent
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
@@ -21,7 +22,7 @@ fn chat_route(
 ) -> Result<HttpResponse, Error> {
     ws::start(
         WsChatSession {
-            id: 0,
+            id: CONNECTION_SEQNO.fetch_add(1, Ordering::Relaxed),
             hb: Instant::now(),
             addr: srv.get_ref().clone(),
         },
@@ -29,6 +30,8 @@ fn chat_route(
         stream,
     )
 }
+
+static CONNECTION_SEQNO: AtomicUsize = AtomicUsize::new(0);
 
 struct WsChatSession {
     /// unique session id
@@ -49,32 +52,18 @@ impl Actor for WsChatSession {
         // we'll start heartbeat process on session start.
         self.hb(ctx);
 
-        // register self in chat server. `AsyncContext::wait` register
-        // future within context, but context waits until this future resolves
-        // before processing any other events.
-        // HttpContext::state() is instance of WsChatSessionState, state is shared
-        // across all routes within application
-        let addr = ctx.address();
-        self.addr
-            .send(Connect {
-                addr: addr.recipient(),
-            })
-            .into_actor(self)
-            .then(|res, act, ctx| {
-                match res {
-                    Ok(res) => act.id = res,
-                    // something is wrong with chat server
-                    _ => ctx.stop(),
-                }
-                fut::ok(())
-            })
-            .wait(ctx);
+        // register with the chat server
+        self.addr.do_send(Connect {
+            id: self.id,
+            addr: ctx.address().recipient(),
+        });
     }
 
-    fn stopping(&mut self, _: &mut Self::Context) -> Running {
-        // notify chat server
-        self.addr.do_send(Disconnect { id: self.id });
-        Running::Stop
+    fn stopped(&mut self, _: &mut Self::Context) {
+        println!("session {} stopping", self.id);
+        // optimistically notify chat server.  if this fails it's not a big
+        // deal, the server will note that we're dead next time it talks to us.
+        let _ = self.addr.try_send(Disconnect { id: self.id });
     }
 }
 
@@ -90,6 +79,7 @@ impl Handler<OutboundMessage> for WsChatSession {
 /// WebSocket message handler
 impl StreamHandler<ws::Message, ws::ProtocolError> for WsChatSession {
     fn handle(&mut self, msg: ws::Message, ctx: &mut Self::Context) {
+        println!("{:?}", msg);
         match msg {
             ws::Message::Ping(msg) => {
                 self.hb = Instant::now();
@@ -114,22 +104,17 @@ impl WsChatSession {
     /// also this method checks heartbeats from client
     fn hb(&self, ctx: &mut ws::WebsocketContext<Self>) {
         ctx.run_interval(HEARTBEAT_INTERVAL, |act, ctx| {
+            println!("session {} checking in", act.id);
             // check client heartbeats
             if Instant::now().duration_since(act.hb) > CLIENT_TIMEOUT {
                 // heartbeat timed out
                 println!("Websocket Client heartbeat failed, disconnecting!");
 
-                // notify chat server
-                act.addr.do_send(Disconnect { id: act.id });
-
                 // stop actor
                 ctx.stop();
-
-                // don't try to send a ping
-                return;
+            } else {
+                ctx.ping("");
             }
-
-            ctx.ping("");
         });
     }
 }

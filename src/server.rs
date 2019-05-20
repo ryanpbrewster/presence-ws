@@ -1,5 +1,6 @@
 use actix::prelude::*;
 use std::collections::HashMap;
+use std::time::Duration;
 
 /// Chat server sends this messages to session
 #[derive(Message, Debug)]
@@ -9,8 +10,8 @@ pub struct OutboundMessage(pub String);
 
 /// New chat session is created
 #[derive(Message)]
-#[rtype(usize)]
 pub struct Connect {
+    pub id: usize,
     pub addr: Recipient<OutboundMessage>,
 }
 
@@ -24,36 +25,36 @@ pub struct Disconnect {
 #[derive(Default)]
 pub struct ChatServer {
     sessions: HashMap<usize, Recipient<OutboundMessage>>,
-    seqno: usize,
 }
 
 impl ChatServer {
-    fn broadcast_active_connections(&self) {
-        for addr in self.sessions.values() {
-            let _ = addr.try_send(OutboundMessage(format!("{} active", self.sessions.len())));
-        }
+    fn broadcast_active_connections(&mut self) {
+        let msg = format!("{} active", self.sessions.len());
+        self.sessions
+            .retain(|_, addr| addr.try_send(OutboundMessage(msg.clone())).is_ok());
     }
 }
 
 impl Actor for ChatServer {
     type Context = Context<Self>;
+
+    fn started(&mut self, ctx: &mut Self::Context) {
+        ctx.run_interval(Duration::from_millis(1000), |actor, _| {
+            println!("active session: {:?}", actor.sessions.keys());
+        });
+    }
 }
 
 /// Register new session and assign unique id to this session
 impl Handler<Connect> for ChatServer {
-    type Result = usize;
+    type Result = ();
 
-    fn handle(&mut self, msg: Connect, _: &mut Context<Self>) -> usize {
+    fn handle(&mut self, msg: Connect, _: &mut Context<Self>) {
         // register session with unique id
-        let id = self.seqno;
-        self.seqno += 1;
-        self.sessions.insert(id, msg.addr);
+        self.sessions.insert(msg.id, msg.addr);
 
         // notify all users in same room
         self.broadcast_active_connections();
-
-        // send id back
-        id
     }
 }
 
