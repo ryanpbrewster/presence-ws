@@ -14,7 +14,8 @@
       }
       function connect() {
         disconnect();
-        var host = "localhost:8080";
+        var host = "35.185.196.82:8080";
+        // var host = "localhost:8080";
         var wsUri = (window.location.protocol=='https:'&&'wss://'||'ws://') + host + '/ws/';
         conn = new WebSocket(wsUri);
         log('Connecting...');
