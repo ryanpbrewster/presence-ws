@@ -39,7 +39,7 @@ gcloud builds submit --tag=$IMAGE_NAME --machine-type=n1-highcpu-8
 # Spin up a server with the image
 
 ```
-gcloud compute instances create-with-container presence-2 \
+gcloud compute instances create-with-container presence-$(date +%s) \
   --container-image $IMAGE_NAME \
   --machine-type=f1-micro \
   --zone=us-west1-b \

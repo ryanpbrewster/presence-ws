@@ -2,6 +2,7 @@ FROM rust:1.34 AS builder
 WORKDIR /rpb/build
 
 # Pre-compile the dependencies
+# This trick courtesy of http://whitfin.io/speeding-up-rust-docker-builds/
 RUN USER=rpb cargo init --name=precompile-deps
 COPY Cargo.toml Cargo.lock ./
 RUN cargo build --release
