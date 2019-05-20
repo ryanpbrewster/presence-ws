@@ -60,7 +60,6 @@ impl Actor for WsChatSession {
     }
 
     fn stopped(&mut self, _: &mut Self::Context) {
-        println!("session {} stopping", self.id);
         // optimistically notify chat server.  if this fails it's not a big
         // deal, the server will note that we're dead next time it talks to us.
         let _ = self.addr.try_send(Disconnect { id: self.id });
@@ -79,7 +78,6 @@ impl Handler<OutboundMessage> for WsChatSession {
 /// WebSocket message handler
 impl StreamHandler<ws::Message, ws::ProtocolError> for WsChatSession {
     fn handle(&mut self, msg: ws::Message, ctx: &mut Self::Context) {
-        println!("{:?}", msg);
         match msg {
             ws::Message::Ping(msg) => {
                 self.hb = Instant::now();
@@ -99,18 +97,11 @@ impl StreamHandler<ws::Message, ws::ProtocolError> for WsChatSession {
 }
 
 impl WsChatSession {
-    /// helper method that sends ping to client every second.
-    ///
-    /// also this method checks heartbeats from client
+    /// send ping to client every second. also check heartbeats from client.
     fn hb(&self, ctx: &mut ws::WebsocketContext<Self>) {
         ctx.run_interval(HEARTBEAT_INTERVAL, |act, ctx| {
-            println!("session {} checking in", act.id);
             // check client heartbeats
             if Instant::now().duration_since(act.hb) > CLIENT_TIMEOUT {
-                // heartbeat timed out
-                println!("Websocket Client heartbeat failed, disconnecting!");
-
-                // stop actor
                 ctx.stop();
             } else {
                 ctx.ping("");

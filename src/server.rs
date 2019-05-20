@@ -39,8 +39,8 @@ impl Actor for ChatServer {
     type Context = Context<Self>;
 
     fn started(&mut self, ctx: &mut Self::Context) {
-        ctx.run_interval(Duration::from_millis(1000), |actor, _| {
-            println!("active session: {:?}", actor.sessions.keys());
+        ctx.run_interval(Duration::from_millis(5000), |actor, _| {
+            actor.broadcast_active_connections();
         });
     }
 }
@@ -52,9 +52,6 @@ impl Handler<Connect> for ChatServer {
     fn handle(&mut self, msg: Connect, _: &mut Context<Self>) {
         // register session with unique id
         self.sessions.insert(msg.id, msg.addr);
-
-        // notify all users in same room
-        self.broadcast_active_connections();
     }
 }
 
@@ -65,6 +62,5 @@ impl Handler<Disconnect> for ChatServer {
     fn handle(&mut self, msg: Disconnect, _: &mut Context<Self>) {
         // remove address
         self.sessions.remove(&msg.id);
-        self.broadcast_active_connections();
     }
 }
