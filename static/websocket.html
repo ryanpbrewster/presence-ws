@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", function() {
   };
   let conn = null;
   function log(msg) {
-    e.log.innerHTML += msg + '<br/>';
+    e.log.innerText += msg + '\n';
   }
   function connect() {
     disconnect();
@@ -44,9 +44,9 @@ document.addEventListener("DOMContentLoaded", function() {
   function update_ui() {
     if (conn == null) {
       e.status.innerText = "disconnected";
-      e.status.innerText = 'Connect';
+      e.status.innerText = "Connect";
     } else {
-      e.status.innerText = `connected (${conn.protocol})`;
+      e.status.innerText = "connected";
       e.connect.innerText = "Disconnect";
     }
   }
@@ -68,8 +68,6 @@ document.addEventListener("DOMContentLoaded", function() {
 <div>
   <button id="connect">Connect</button>&nbsp;|&nbsp;Status: <span id="status">disconnected</span>
 </div>
-<div id="log" style="width:20em;height:15em;overflow:auto;border:1px solid black">
-Event log:<br/>
-</div>
+<div id="log"></div>
 </body>
 </html>
